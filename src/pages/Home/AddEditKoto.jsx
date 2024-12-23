@@ -1,25 +1,108 @@
 import React, { useState } from "react";
 import TagInput from "../../components/input/TagInput";
 import { MdClose } from "react-icons/md";
+import axios from "axios";
+import axiosInstance from "../../utils/axiosInstance";
+import Modal from "react-modal";
 
-const AddEditKoto = ({ kotoData, type, onClose }) => {
-  const [koto, setKoto] = useState("");
-  const [lectura, setLectura] = useState("");
-  const [ejemplo, setEjemplo] = useState("");
-  const [espanol, setEspanol] = useState("");
-  const [ingles, setIngles] = useState("");
-  const [tags, setTags] = useState([]);
+Modal.setAppElement("#root");
 
+const AddEditKoto = ({
+  kotoData,
+  type,
+  getAllKotos,
+  onClose,
+  showToastMessage,
+}) => {
+  const [kotoba, setKoto] = useState(kotoData?.kotoba || "");
+  const [lectura, setLectura] = useState(kotoData?.lectura || "");
+  const [ejemplo, setEjemplo] = useState(kotoData?.frase || "");
+  const [espanol, setEspanol] = useState(kotoData?.español || "");
+  const [ingles, setIngles] = useState(kotoData?.ingles || "");
+  const [tags, setTags] = useState(kotoData?.tags || []);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false); 
 
-  //Add Koto
-  const addNewKoto = async () => {};
+  // Add Koto
+  const addNewKoto = async () => {
+    setLoading(true); 
+    try {
+      const response = await axiosInstance.post("/add-koto", {
+        kotoba, // Palabra o kanji
+        tags, // Array de tags
+        lectura, // Lectura de la palabra o kanji
+        frase: ejemplo, // Ejemplo de uso
+        español: espanol, // Traducción en español
+        ingles, // Traducción en inglés
+      });
+
+      // Validar si la respuesta tiene datos esperados
+      console.log(response.data.kotoba);
+      if (response.data) {
+        showToastMessage("Tarjeta agregada exitosamente");
+
+        getAllKotos(); // Actualiza la lista de 'kotos'
+        onClose(); // Cierra el modal
+      }
+    } catch (error) {
+      console.error(error); // Para depurar el error si es necesario
+      if (error.code === "ECONNABORTED") {
+        setError("El servidor está tardando demasiado, intente nuevamente.");
+      } else if (
+        error.response &&
+        error.response.data &&
+        error.response.data.message
+      ) {
+        setError(error.response.data.message);
+      } else {
+        setError("Error inesperado ha ocurrido, intente nuevamente.");
+      }
+    } finally {
+      setLoading(false); 
+    }
+  };
 
   // Edit Koto
-  const editKoto = async () => {};
+  const editKoto = async () => {
+    const kotoId = kotoData._id;
+    
+    setLoading(true); 
+    try {
+      const response = await axiosInstance.put("/edit-koto/" + kotoId, {
+        kotoba, // Palabra o kanji
+        tags, // Array de tags
+        lectura, // Lectura de la palabra o kanji
+        frase: ejemplo, // Ejemplo de uso
+        español: espanol, // Traducción en español
+        ingles, // Traducción en inglés
+      });
+
+      console.log(response.data.kotoba);
+      if (response.data) {
+        showToastMessage("Tarjeta editada con éxito");
+        getAllKotos(); 
+        onClose(); 
+      }
+    } catch (error) {
+      console.error(error); 
+      if (error.code === "ECONNABORTED") {
+        setError("El servidor está tardando demasiado, intente nuevamente.");
+      } else if (
+        error.response &&
+        error.response.data &&
+        error.response.data.message
+      ) {
+        setError(error.response.data.message);
+      } else {
+        setError("Error inesperado ha ocurrido, intente nuevamente.");
+      }
+    } finally {
+      setLoading(false); 
+    }
+  };
 
   const handleAddKoto = () => {
-    if (!koto) {
+    if (!kotoba) {
       setError("Inserte una palabra o kanji");
       return;
     }
@@ -40,7 +123,7 @@ const AddEditKoto = ({ kotoData, type, onClose }) => {
     }
 
     const newKoto = {
-      palabra: koto,
+      kotoba,
       lectura,
       ejemplo,
       espanol,
@@ -60,7 +143,7 @@ const AddEditKoto = ({ kotoData, type, onClose }) => {
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/50">
-      {/* Contenedor para el botón, que estará fuera de la tarjeta */}
+      
       <button
         type="button"
         className="absolute left-1/2 transform -translate-x-1/2 top-5 w-12 h-12 rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 border border-gray-300 z-10"
@@ -81,12 +164,12 @@ const AddEditKoto = ({ kotoData, type, onClose }) => {
               type="text"
               className="text-2xl text-gray-900 outline-none border-b border-gray-300 focus:border-blue-500"
               placeholder="図書館"
-              value={koto}
+              value={kotoba}
               onChange={({ target }) => setKoto(target.value)}
             />
           </div>
 
-          {/* Otros campos de formulario (lectura, ejemplo, tags, etc.) */}
+    
           <div className="flex flex-col gap-2 mt-4">
             <label className="input-label">LECTURA</label>
             <textarea
@@ -135,6 +218,7 @@ const AddEditKoto = ({ kotoData, type, onClose }) => {
             <label className="input-label">TAGS</label>
             <TagInput tags={tags} setTags={setTags} />
           </div>
+
           {error && (
             <p className="text-red-500 text-xs pb-1 text-center bg-gray-100 rounded-md py-1">
               {error}
@@ -145,8 +229,9 @@ const AddEditKoto = ({ kotoData, type, onClose }) => {
             type="button"
             className="btn-primary font-medium mt-5 p-3 rounded bg-blue-500 text-white hover:bg-blue-600"
             onClick={handleAddKoto}
+            disabled={loading} 
           >
-            Agregar
+            {loading ? "Cargando..." : type === "edit" ? "Editar" : "Agregar"}
           </button>
         </div>
       </div>

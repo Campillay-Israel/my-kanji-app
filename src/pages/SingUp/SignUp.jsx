@@ -1,14 +1,16 @@
 import React, { useState } from "react";
 import Navbar from "../../components/Navbar/Navbar";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import PasswordInput from "../../components/input/PasswordInput";
 import { validateEmail } from "../../utils/helper";
+import axiosInstance from "../../utils/axiosInstance";
 
 const SignUp = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
+  const navigate = useNavigate(); // Corrected Navigate to useNavigate()
 
   const handleSignUp = async (e) => {
     e.preventDefault();
@@ -18,17 +20,45 @@ const SignUp = () => {
       return;
     }
     if (!validateEmail(email)) {
-      setError("Ⓧ Escriba un correo valido Ⓧ");
+      setError("Ⓧ Escriba un correo válido Ⓧ");
       return;
     }
     if (!password) {
       setError("Ⓧ Escriba una contraseña Ⓧ");
       return;
     }
-    setError('')
+    setError("");
+
+    try {
+      // SignUp API Call
+      const response = await axiosInstance.post("/create-account", {
+        fullName: name,
+        email: email,
+        password: password,
+      });
+
+      if (response.data && response.data.error) {
+        setError(response.data.message);
+        return;
+      }
+      if (response.data && response.data.accessToken) {
+        localStorage.setItem("token", response.data.accessToken);
+        navigate("/dashboard"); // Navigate instead of Navigate()
+      }
+    } catch (error) {
+      // Handle sign-up error
+      if (
+        error.response &&
+        error.response.data &&
+        error.response.data.message
+      ) {
+        setError(error.response.data.message);
+      } else {
+        setError("Error inesperado ha ocurrido, intente nuevamente");
+      }
+    }
   };
 
-  // SignUp API Call
   return (
     <>
       <Navbar />
@@ -65,7 +95,7 @@ const SignUp = () => {
               Crear Cuenta
             </button>
             <p className="text-sm text-center mt-4">
-              Ya tengo una cuenta {""}
+              Ya tengo una cuenta{" "}
               <Link to="/login" className="font-medium text-primary underline">
                 Login
               </Link>
