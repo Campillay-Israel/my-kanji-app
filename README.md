@@ -47,7 +47,7 @@
 ### Pasos
 1. Clona el repositorio:
    ```bash
-   git clone <url-del-repositorio>
+   git clone https://github.com/Campillay-Israel/my-kanji-app.git
    ```
 2. Instala las dependencias:
    ```bash
